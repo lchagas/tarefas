@@ -28,6 +28,7 @@ export const db = {
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -85,6 +86,7 @@ export const db = {
         .from('tasks')
         .update(normalizedUpdates)
         .eq('id', taskId)
+        .eq('user_id', userId)
         .select();
       
       if (error) throw error;
@@ -106,7 +108,8 @@ export const db = {
       const { error } = await supabase
         .from('tasks')
         .delete()
-        .eq('id', taskId);
+        .eq('id', taskId)
+        .eq('user_id', userId);
       
       if (error) throw error;
       return true;
