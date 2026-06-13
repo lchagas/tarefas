@@ -10,6 +10,15 @@ export default function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  const validatePassword = (pass) => {
+    if (pass.length < 8) return 'A senha deve ter pelo menos 8 caracteres.';
+    if (!/[A-Z]/.test(pass)) return 'A senha deve conter pelo menos uma letra maiúscula.';
+    if (!/[a-z]/.test(pass)) return 'A senha deve conter pelo menos uma letra minúscula.';
+    if (!/[0-9]/.test(pass)) return 'A senha deve conter pelo menos um número.';
+    if (!/[@$!%*?&]/.test(pass)) return 'A senha deve conter pelo menos um caractere especial (ex: @$!%*?&).';
+    return null;
+  };
+
   const handleAuth = async (e) => {
     e.preventDefault();
     if (!email || !password) {
@@ -33,6 +42,15 @@ export default function Login({ onLoginSuccess }) {
         onLoginSuccess(demoUser);
       }, 1000);
       return;
+    }
+
+    if (isSignUp) {
+      const pwdError = validatePassword(password);
+      if (pwdError) {
+        setMessage({ type: 'error', text: pwdError });
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -69,7 +87,11 @@ export default function Login({ onLoginSuccess }) {
         }
       }
     } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Ocorreu um erro na autenticação.' });
+      let errorMsg = error.message || 'Ocorreu um erro na autenticação.';
+      if (errorMsg.toLowerCase().includes('email not confirmed') || errorMsg.toLowerCase().includes('email_not_confirmed')) {
+        errorMsg = 'Por favor, confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada para ativar a conta.';
+      }
+      setMessage({ type: 'error', text: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -214,6 +236,11 @@ export default function Login({ onLoginSuccess }) {
                   className="block w-full rounded-xl border border-slate-800 py-3 pl-10 pr-4 text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 transition-all duration-200 text-sm bg-slate-950/40 hover:bg-slate-950/20"
                 />
               </div>
+              {isSignUp && (
+                <p className="mt-1.5 text-[10px] text-slate-500 leading-normal">
+                  A senha deve ter pelo menos 8 caracteres, contendo letra maiúscula, minúscula, número e caractere especial (ex: @$!%*?&).
+                </p>
+              )}
             </div>
           </div>
 

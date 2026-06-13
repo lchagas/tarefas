@@ -4,7 +4,137 @@ import Login from './components/Login';
 import TaskList from './components/TaskList';
 import Analytics from './components/Analytics';
 import CalendarView from './components/CalendarView';
-import { CheckSquare, BarChart3, Calendar, LogOut, User, AlertTriangle } from 'lucide-react';
+import { CheckSquare, BarChart3, Calendar, LogOut, User, AlertTriangle, Lock } from 'lucide-react';
+
+function ForcePasswordChange({ user, onPasswordChanged, onLogout }) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const validatePassword = (pass) => {
+    if (pass.length < 8) return 'A senha deve ter pelo menos 8 caracteres.';
+    if (!/[A-Z]/.test(pass)) return 'A senha deve conter pelo menos uma letra maiúscula.';
+    if (!/[a-z]/.test(pass)) return 'A senha deve conter pelo menos uma letra minúscula.';
+    if (!/[0-9]/.test(pass)) return 'A senha deve conter pelo menos um número.';
+    if (!/[@$!%*?&]/.test(pass)) return 'A senha deve conter pelo menos um caractere especial (ex: @$!%*?&).';
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não coincidem.');
+      return;
+    }
+
+    const pwdError = validatePassword(newPassword);
+    if (pwdError) {
+      setError(pwdError);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { force_password_change: false }
+      });
+
+      if (updateError) throw updateError;
+
+      onPasswordChanged(data.user);
+    } catch (err) {
+      setError(err.message || 'Erro ao atualizar a senha.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0B0F19] px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl shadow-black/50">
+        <div className="text-center">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-955/30 text-amber-400 mb-4 ring-8 ring-amber-955/20">
+            <Lock className="h-6 w-6" />
+          </div>
+          <h2 className="font-display text-2xl font-bold tracking-tight text-slate-100">
+            Alteração de Senha Obrigatória
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            Por motivos de segurança, você deve alterar a senha padrão no seu primeiro acesso.
+          </p>
+        </div>
+
+        {error && (
+          <div className="rounded-lg p-3.5 text-sm bg-rose-955/20 border border-rose-900/50 text-rose-350 flex items-start gap-2.5">
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-405 mb-1.5">
+                Nova Senha Forte
+              </label>
+              <input
+                type="password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Sua nova senha"
+                className="block w-full rounded-xl border border-slate-800 py-3 px-4 text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 transition-all text-sm bg-slate-950/40 hover:bg-slate-950/20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-405 mb-1.5">
+                Confirmar Nova Senha
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a nova senha"
+                className="block w-full rounded-xl border border-slate-800 py-3 px-4 text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/25 transition-all text-sm bg-slate-950/40 hover:bg-slate-950/20"
+              />
+            </div>
+          </div>
+
+          <p className="text-[10px] text-slate-500 leading-normal">
+            Requisitos: Mínimo de 8 caracteres, contendo pelo menos uma letra maiúscula, uma minúscula, um número e um caractere especial (ex: @$!%*?&).
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative flex w-full justify-center rounded-xl bg-blue-600 py-3 px-4 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 active:scale-[0.98] transition-all shadow-lg shadow-blue-500/10 cursor-pointer disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                'Salvar Nova Senha'
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onLogout}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-800 bg-[#161f30] hover:bg-slate-800/85 py-3 px-4 text-sm font-semibold text-rose-400 active:scale-[0.98] transition-all cursor-pointer"
+            >
+              Cancelar e Sair
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -59,6 +189,17 @@ export default function App() {
   // Se o usuário não está logado, exibe a tela de Login
   if (!user) {
     return <Login onLoginSuccess={(u) => setUser(u)} />;
+  }
+
+  // Se o usuário precisa forçar a alteração de senha no primeiro login
+  if (user && user.user_metadata?.force_password_change) {
+    return (
+      <ForcePasswordChange 
+        user={user} 
+        onPasswordChanged={(updatedUser) => setUser(updatedUser)} 
+        onLogout={handleLogout}
+      />
+    );
   }
 
   return (
